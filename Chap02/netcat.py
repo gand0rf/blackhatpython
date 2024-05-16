@@ -1,10 +1,10 @@
 import argparse
 import socket
-import shlex
 import subprocess
 import sys
 import textwrap
 import threading
+import time
 
 class NetCat:
     def __init__(self, args, buffer=None):
@@ -29,23 +29,23 @@ class NetCat:
                 recv_len = 1
                 response = ''
                 while recv_len:
-                    data = self.socket.recv(4096)
+                    data = self.socket.recv(16384)
                     recv_len = len(data)
                     response += data.decode('utf-8')
-                    if recv_len < 4096:
+                    if recv_len < 16384:
                         break
                 if response:
                     print(response)
                     buffer = input('> ')
                     buffer += '\n'
-                    self.socket.send(buffer.encode('utf-8'))
+                    if len(buffer) > 2:
+                        self.socket.send(buffer.encode('utf-8'))
         except KeyboardInterrupt:
             print('User terminated.')
             self.socket.close()
             sys.exit()
 
     def listen(self):
-        print('listening')
         self.socket.bind((self.args.target, self.args.port))
         self.socket.listen(5)
         while True:
@@ -63,10 +63,8 @@ class NetCat:
                 data = client_socket.recv(4096)
                 if data:
                     file_buffer += data
-                    print(len(file_buffer))
                 else:
                     break
-
             with open(self.args.upload, 'wb') as f:
                 f.write(file_buffer)
             message = f'Saved file {self.args.upload}'
@@ -78,23 +76,21 @@ class NetCat:
                     client_socket.send(b'BHP: ')
                     while '\n' not in cmd_buffer.decode('utf-8'):
                         cmd_buffer += client_socket.recv(4096)
-                    response = execute(cmd_buffer.decode('utf-8'))
-                    client_socket.send(response.encode('utf-8'))
-                    cmd_buffer = b''
+                    if len(str(cmd_buffer)) != 0:
+                        response = execute(cmd_buffer.decode('utf-8'))
+                        client_socket.send(response.encode('utf-8'))
+                        cmd_buffer = b''
                 except Exception as e:
                     print(f'server killed {e}')
                     self.socket.close()
                     sys.exit()
-
+                    
 def execute(cmd):
     cmd = cmd.strip('\n')
     if not cmd:
         return
     cmd = cmd.split(' ')
-    if len(cmd) > 1:
-        output = subprocess.Popen(cmd,text=True,stderr=subprocess.PIPE,stdout=subprocess.PIPE)
-    else:
-        output = subprocess.Popen([cmd[0]],text=True,stderr=subprocess.PIPE,stdout=subprocess.PIPE)
+    output = subprocess.Popen(cmd,text=True,stderr=subprocess.PIPE,stdout=subprocess.PIPE)
     result, error = output.communicate()
     return result
 
