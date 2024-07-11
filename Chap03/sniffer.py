@@ -17,6 +17,8 @@ def main(HOST, pt):
 
     if os.name == 'nt':
         sniffer.ioctl(socket.SIO_RCVALL, socket.RCVALL_ON)
+
+    # Loops program until user presses Ctrl+C to stop it.
     while True:    
         print(sniffer.recvfrom(65565))
 
