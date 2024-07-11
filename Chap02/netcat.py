@@ -73,7 +73,7 @@ class NetCat:
             cmd_buffer = b''
             while True:
                 try:
-                    client_socket.send(b'BHP: ')
+                    client_socket.send(b'What would you like?: ')
                     while '\n' not in cmd_buffer.decode('utf-8'):
                         cmd_buffer += client_socket.recv(4096)
                     if len(str(cmd_buffer)) != 0:
